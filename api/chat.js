@@ -1,7 +1,7 @@
 import OpenAI from "openai";
 
 const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 const SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxvOcxYDhQ6nCtqC3SsAj_81wHBobEFV7zDgQkS5HkOYiVr4CNtr5zw_rSLashNOzq-/exec";
@@ -14,7 +14,7 @@ Your job is to answer questions only about Sarakpy Ny's background, education, e
 Scope:
 - You may answer only questions about Sarakpy Ny's academic background, professional experience, projects, research interests, CV, skills, awards, volunteering, languages, interests, references, and contact details.
 - If the user asks something outside that scope, reply exactly:
-I can only answer questions about Sarakpy Ny’s background, projects, CV, research interests, references, and contact information.
+Sorry, I don't have this information. 
 
 Identity:
 Name: Sarakpy Ny
@@ -141,66 +141,66 @@ Assistant: Sarakpy Ny speaks Khmer, English, and French.
 `;
 
 export default async function handler(req, res) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-    if (req.method === "OPTIONS") {
-        return res.status(200).end();
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  try {
+    const { message, page } = req.body || {};
+
+    if (!message || typeof message !== "string") {
+      return res.status(400).json({ error: "Missing message" });
     }
 
-    if (req.method !== "POST") {
-        return res.status(405).json({ error: "Method not allowed" });
-    }
+    const userAgent = req.headers["user-agent"] || "";
 
     try {
-        const { message, page } = req.body || {};
-
-        if (!message || typeof message !== "string") {
-            return res.status(400).json({ error: "Missing message" });
-        }
-
-        const userAgent = req.headers["user-agent"] || "";
-
-        try {
-            await fetch(SHEETS_WEBHOOK_URL, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                    question: message,
-                    page: page || "",
-                    userAgent,
-                }),
-            });
-        } catch (logError) {
-            console.error("Sheets logging error:", logError);
-        }
-
-        const response = await client.responses.create({
-            model: "gpt-4o-mini",
-            temperature: 0.2,
-            input: [
-                { role: "system", content: WEBSITE_CONTEXT },
-                { role: "user", content: message },
-            ],
-        });
-
-        let reply =
-            response.output_text || "Sorry, I could not generate a response.";
-
-        reply = reply
-            .replace(/\b[Ss]he\b/g, "Sarakpy Ny")
-            .replace(/\b[Hh]er\b/g, "Sarakpy Ny's")
-            .replace(/\b[Hh]ers\b/g, "Sarakpy Ny's");
-
-        return res.status(200).json({ reply });
-    } catch (error) {
-        console.error("Chat error:", error);
-        return res.status(500).json({
-            error: "Server error",
-            details: error?.message || "Unknown error",
-        });
+      await fetch(SHEETS_WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          question: message,
+          page: page || "",
+          userAgent,
+        }),
+      });
+    } catch (logError) {
+      console.error("Sheets logging error:", logError);
     }
+
+    const response = await client.responses.create({
+      model: "gpt-4o-mini",
+      temperature: 0.2,
+      input: [
+        { role: "system", content: WEBSITE_CONTEXT },
+        { role: "user", content: message },
+      ],
+    });
+
+    let reply =
+      response.output_text || "Sorry, I could not generate a response.";
+
+    reply = reply
+      .replace(/\b[Ss]he\b/g, "Sarakpy Ny")
+      .replace(/\b[Hh]er\b/g, "Sarakpy Ny's")
+      .replace(/\b[Hh]ers\b/g, "Sarakpy Ny's");
+
+    return res.status(200).json({ reply });
+  } catch (error) {
+    console.error("Chat error:", error);
+    return res.status(500).json({
+      error: "Server error",
+      details: error?.message || "Unknown error",
+    });
+  }
 }
