@@ -4,6 +4,8 @@ const client = new OpenAI({
     apiKey: process.env.OPENAI_API_KEY,
 });
 
+const SHEETS_WEBHOOK_URL = "https://script.google.com/macros/s/AKfycbxvOcxYDhQ6nCtqC3SsAj_81wHBobEFV7zDgQkS5HkOYiVr4CNtr5zw_rSLashNOzq-/exec";
+
 const WEBSITE_CONTEXT = `
 You are the website assistant for Sarakpy Ny.
 
@@ -152,10 +154,28 @@ export default async function handler(req, res) {
     }
 
     try {
-        const { message } = req.body || {};
+        const { message, page } = req.body || {};
 
         if (!message || typeof message !== "string") {
             return res.status(400).json({ error: "Missing message" });
+        }
+
+        const userAgent = req.headers["user-agent"] || "";
+
+        try {
+            await fetch(SHEETS_WEBHOOK_URL, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    question: message,
+                    page: page || "",
+                    userAgent,
+                }),
+            });
+        } catch (logError) {
+            console.error("Sheets logging error:", logError);
         }
 
         const response = await client.responses.create({
